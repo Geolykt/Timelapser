@@ -1,0 +1,5 @@
+{
+  "entrypoint": "de.geolykt.timelapser.Timelapser",
+  "name": "Timelapser",
+  "version": "1.0.0-SNAPSHOT"
+}
