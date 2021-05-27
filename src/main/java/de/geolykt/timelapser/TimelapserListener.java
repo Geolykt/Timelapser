@@ -43,6 +43,8 @@ public final class TimelapserListener implements Listener {
 
     private static final double DYN_WIDTH = Timelapser.WIDTH - 30.0F;
     private static final double DYN_HEIGHT = Timelapser.HEIGHT - 30.0F;
+    private long lastDrawMilli = 0;
+    private long lastDrawYear = 0;
 
     private HashMap<Integer, Font> FONT_CACHE = new HashMap<>();
     public static final Color DARK_ORAGE = Color.ORANGE.darker();
@@ -50,6 +52,7 @@ public final class TimelapserListener implements Listener {
     public static final int OVAL_RADIUS = 3;
 
     public boolean trunctuatePolygon = true;
+    public boolean displayDrawTime = true;
 
     /**
      * The squared distance between a polygon edge and the parent point of the polygon (in our case the star).
@@ -363,6 +366,14 @@ public final class TimelapserListener implements Listener {
                             int deltaYSq = (yPos - p.ypoints[j]) * (yPos - p.ypoints[j]);
                             double distSq = deltaXSq + deltaYSq;
                             if (distSq > maxPolygonDistanceSquared) {
+                                if (!trunctuated) {
+                                    multiplyVertices(p);
+                                    multiplyVertices(p);
+                                    multiplyVertices(p);
+                                    j = -1; // reset array (-1 because of the j++ that will be invoked later on)
+                                    trunctuated = true;
+                                    continue;
+                                }
 //                                double ratio = deltaXSq / deltaYSq;
 //                                double trunctuatedX = maxPolygonDistanceSquared * ratio;
                                 double ratio = maxPolygonDistance / Math.sqrt(distSq);
@@ -370,7 +381,6 @@ public final class TimelapserListener implements Listener {
                                 int newDeltaY = (int) ((yPos - p.ypoints[j]) * -ratio);
                                 p.xpoints[j] = xPos + newDeltaX;
                                 p.ypoints[j] = yPos + newDeltaY;
-                                trunctuated = true;
                             }
                         }
                     }
@@ -421,9 +431,51 @@ public final class TimelapserListener implements Listener {
                     g2d.drawImage(bi, 0, 0, (int) DYN_WIDTH, (int) DYN_HEIGHT, 0, 0, bi.getWidth(), bi.getHeight(), null);
                 });
             }
+            if (displayDrawTime) {
+                long thisDrawMilli = System.currentTimeMillis();
+                long currentYear = Galimulator.getGameYear();
+                extension.renderData.add(g2d -> {
+                    g2d.setColor(Color.WHITE);
+                    g2d.drawString(String.format("FPS: %.02f", 1000.0f / (thisDrawMilli - lastDrawMilli)), 10, 10);
+                    if (currentYear > 9_999_999) {
+                        g2d.drawString(String.format("Year: %d", currentYear), 10, 30);
+                    } else {
+                        g2d.drawString(String.format("Year: %08d", currentYear), 10, 30);
+                    }
+                    g2d.drawString(String.format("Time taken: %03d years", currentYear - lastDrawYear), 10, 50);
+                    lastDrawYear = currentYear;
+                    lastDrawMilli = thisDrawMilli;
+                });
+            }
             extension.awaitInput.set(false);
             extension.lock.release();
         }
+    }
+
+    /**
+     * Increases the amount of vertices the polygon has.
+     * The shape of the polygon is not altered.
+     *
+     * @param p The polygon to alter
+     */
+    private void multiplyVertices(Polygon p) {
+        int[] xPosO = p.xpoints;
+        int[] yPosO = p.ypoints;
+        int points = p.npoints;
+        int[] xPosN = new int[points * 2];
+        int[] yPosN = new int[points * 2];
+        p.npoints = points * 2;
+        p.xpoints = xPosN;
+        p.ypoints = yPosN;
+        for (int i = 0, j = 0; i < points;) {
+            int x = xPosO[i];
+            int y = yPosO[i++];
+            xPosN[j] = x;
+            yPosN[j++] = y;
+            xPosN[j] = x + ((xPosO[i % points] - x) / 2);
+            yPosN[j++] = y + ((yPosO[i % points] - y) / 2);
+        }
+        p.invalidate();
     }
 
     public static final <T> T indexChain(ArrayList<T> valueDump, Map<T, T> map, T start) {
