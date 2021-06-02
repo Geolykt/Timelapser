@@ -14,15 +14,22 @@ import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
+
+import javax.imageio.ImageIO;
 
 import de.geolykt.starloader.api.Galimulator;
+import de.geolykt.starloader.api.actor.ActorSpec;
 import de.geolykt.starloader.api.empire.ActiveEmpire;
 import de.geolykt.starloader.api.empire.Star;
 import de.geolykt.starloader.api.event.EventHandler;
@@ -39,7 +46,9 @@ public final class TimelapserListener implements Listener {
     private final Timelapser extension;
     private final Map<Integer, Color> colors = new HashMap<>();
     private final Map<Integer, Color> colorsLessAlpha = new HashMap<>();
-    private final Map<Integer, Paint> vasalPaint = new HashMap<>();
+    private final Map<Integer, Paint> vassalPaint = new HashMap<>();
+    private final Map<String, BufferedImage> actorCache = new HashMap<>();
+    private final Map<Map.Entry<String, Color>, BufferedImage> coloredActorCache = new HashMap<>();
 
     private static final double DYN_WIDTH = Timelapser.WIDTH - 30.0F;
     private static final double DYN_HEIGHT = Timelapser.HEIGHT - 30.0F;
@@ -53,6 +62,7 @@ public final class TimelapserListener implements Listener {
 
     public boolean trunctuatePolygon = true;
     public boolean displayDrawTime = true;
+    public boolean drawActors = true;
 
     /**
      * The squared distance between a polygon edge and the parent point of the polygon (in our case the star).
@@ -79,7 +89,7 @@ public final class TimelapserListener implements Listener {
         float y = s.getY();
         ActiveEmpire empire = s.getAssignedEmpire();
         Color col = colors.get(empire.getUID());
-        Paint paint = vasalPaint.get(empire.getUID());
+        Paint paint = vassalPaint.get(empire.getUID());
         if (empires.add(empire)) {
             if (col == null) {
                 col = empire.getAWTColor();
@@ -87,7 +97,7 @@ public final class TimelapserListener implements Listener {
                 colorsLessAlpha.put(empire.getUID(), new Color(col.getRed(), col.getGreen(), col.getBlue(), 191));
             }
             boolean alwaysFalse = false;
-            if (alwaysFalse) { // Alternative paints are only going to be good for vassals, but are completely unusable for alliances
+            if (alwaysFalse) { // Alternative paints are only going to be good for vassals, but are completely unusable for alliances as initially intended
                 BufferedImage tex = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
                 Graphics2D texG2d = tex.createGraphics();
                 texG2d.setColor(colorsLessAlpha.get(empire.getUID()));
@@ -97,7 +107,7 @@ public final class TimelapserListener implements Listener {
                 texG2d.drawLine(16, 0, 0, 16);
                 texG2d.drawLine(0, 16, 16, 0);
                 paint = new TexturePaint(tex, new Rectangle(16, 16));
-                vasalPaint.put(s.getAssignedEmpire().getUID(), paint);
+                vassalPaint.put(s.getAssignedEmpire().getUID(), paint);
             }
         }
         markers.add(new ImmutableQuadruple<>(x, y, colorsLessAlpha.get(empire.getUID()), paint));
@@ -126,6 +136,49 @@ public final class TimelapserListener implements Listener {
 
     public static int DEBUG_POLYGON = -1;
     public static boolean ENABLE_DEBUG = false;
+
+    public BufferedImage fetchNocolTexture(String name) {
+        // TODO eventually honour the SL 2.0 data folder
+        if (actorCache.containsKey(name)) {
+            return actorCache.get(name);
+        }
+        File loc = new File(new File("data", "sprites"), name);
+        if (!loc.exists()) {
+            extension.getLogger().error(String.format(Locale.ROOT, "Unable to load in sprite: %s (expected it to be in %s)", name, loc.getAbsolutePath()));
+            actorCache.put(name, new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB));
+            return actorCache.get(name);
+        }
+        BufferedImage bi;
+        try {
+            bi = ImageIO.read(loc);
+        } catch (IOException e) {
+            e.printStackTrace();
+            extension.getLogger().error(String.format(Locale.ROOT, "Unable to load in sprite: %s (expected it to be in %s)", name, loc.getAbsolutePath()));
+            actorCache.put(name, new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB));
+            return actorCache.get(name);
+        }
+        actorCache.put(name, bi);
+        return actorCache.get(name);
+    }
+
+    public BufferedImage fetchColTexture(String name, Color awtCol) {
+        if (coloredActorCache.containsKey(Map.entry(name, awtCol))) {
+            return coloredActorCache.get(Map.entry(name, awtCol));
+        }
+        BufferedImage base = fetchNocolTexture(name); // Just avoid doing things twice
+        BufferedImage bi = new BufferedImage(base.getWidth(), base.getHeight(), base.getType());
+        int replaceColor = awtCol.getRGB() & 0x00FFFFFF;
+        for (int y = 0; y < base.getHeight(); y++) {
+            for (int x = 0; x < base.getWidth(); x++) {
+                int argb = base.getRGB(x, y);
+                if ((argb & 0x00FFFFFF) == 0x00FFFFFF) {
+                    bi.setRGB(x, y, replaceColor | (argb & 0xFF000000));
+                }
+            }
+        }
+        coloredActorCache.put(Map.entry(name, awtCol), bi);
+        return bi;
+    }
 
     /**
      * Event handler that is run every tick.
@@ -184,6 +237,25 @@ public final class TimelapserListener implements Listener {
                     g2d.drawGlyphVector(gVector, x, y);
                 }
             });
+            if (drawActors) {
+                List<ImmutableQuadruple<Float, Float, String, Color>> actors = new ArrayList<>();
+                List<ImmutableQuadruple<Float, Float, String, Color>> actorsNocol = new ArrayList<>();
+                coloredActorCache.clear();
+                for (ActiveEmpire e : Galimulator.getEmpires()) {
+                    Color awtColor = e.getAWTColor();
+                    Vector<ActorSpec> empireActors = e.getSLActors();
+                    for (ActorSpec aSpec : empireActors) {
+                        actors.add(new ImmutableQuadruple<>(aSpec.getX(), aSpec.getY(), aSpec.getTextureName(), awtColor));
+                        if (aSpec.getColorlessTextureName() != null) {
+                            // I know that the docs say that it is not null, but that is a lie. :/
+                            actorsNocol.add(new ImmutableQuadruple<>(aSpec.getX(), aSpec.getY(), aSpec.getColorlessTextureName(), awtColor));
+                        }
+                    }
+                }
+                extension.renderData.add(g2d -> {
+                    
+                });
+            }
             extension.renderData.add(0, g2d -> {
                 g2d.setColor(Color.WHITE);
                 for (Map.Entry<Map.Entry<Float, Float>, Map.Entry<Float, Float>> e : starlanes) {
@@ -431,6 +503,7 @@ public final class TimelapserListener implements Listener {
                     g2d.drawImage(bi, 0, 0, (int) DYN_WIDTH, (int) DYN_HEIGHT, 0, 0, bi.getWidth(), bi.getHeight(), null);
                 });
             }
+            
             if (displayDrawTime) {
                 long thisDrawMilli = System.currentTimeMillis();
                 long currentYear = Galimulator.getGameYear();
