@@ -15,11 +15,11 @@ import javax.swing.JPanel;
 
 public class TimelapserRender implements Runnable {
 
-    private final Timelapser extension;
     private BufferedImage bi;
-    private JFrame jf = new JFrame("Timelapser Render View");
-    private JLabel imageLabel = new JLabel();
+    private final Timelapser extension;
     private boolean foo = false;
+    private JLabel imageLabel = new JLabel();
+    private JFrame jf = new JFrame("Timelapser Render View");
 
     public TimelapserRender(Timelapser extension) {
         this.extension = extension;
