@@ -3,7 +3,7 @@ package de.geolykt.timelapser;
 import java.awt.Color;
 import java.awt.Paint;
 import java.awt.Point;
-import java.awt.Polygon;
+import java.awt.Shape;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -77,7 +77,7 @@ public class IsolineCellingImpl extends AbstractCellingImpl {
     }
 
     @Override
-    public List<Polygon> process(ArrayList<ImmutableQuadruple<Float, Float, Color, Paint>> markers, float minW,
+    public List<? extends Shape> process(ArrayList<ImmutableQuadruple<Float, Float, Color, Paint>> markers, float minW,
             float maxW, float minH, float maxH, float canvasW, float canvasH) {
 
         // Initialise requires data holders

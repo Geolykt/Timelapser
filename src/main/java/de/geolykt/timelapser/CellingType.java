@@ -22,6 +22,13 @@ public enum CellingType {
     AWTVORONOI_TRUNCTUATED_SMOOTH(Family.VORONOI),
 
     /**
+     * An algorithm that breaks down everything into squares,
+     * probably has an actual name.
+     * Breaks the markers into rasters for easy computation.
+     */
+    DISTANCE_SQARES(Family.DISTANCE),
+
+    /**
      * Built-in implementation of the marching squares algorithm.
      * Breaks the markers into rasters for easy computation.
      */
@@ -32,6 +39,12 @@ public enum CellingType {
      * however even then the implementations can radically differ between each other or look very much the same.
      */
     public static enum Family {
+
+        /**
+         * Distance-checking based implementations, this category should only be used if there is no
+         * more appropriate category.
+         */
+        DISTANCE,
 
         /**
          * The algorithm produces isoline-like shapes.

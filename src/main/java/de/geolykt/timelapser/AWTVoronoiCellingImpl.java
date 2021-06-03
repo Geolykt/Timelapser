@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Paint;
 import java.awt.Point;
 import java.awt.Polygon;
+import java.awt.Shape;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +52,7 @@ public class AWTVoronoiCellingImpl extends AbstractCellingImpl {
     }
 
     @Override
-    public List<Polygon> process(ArrayList<ImmutableQuadruple<Float, Float, Color, Paint>> markers,
+    public List<? extends Shape> process(ArrayList<ImmutableQuadruple<Float, Float, Color, Paint>> markers,
             final float minW, final float maxW, final float minH, final float maxH,
             final float canvasW, final float canvasH) {
         Voronoi vor = new Voronoi(Math.min(minH/canvasH, minW/canvasW)); // I do not really know what the value means

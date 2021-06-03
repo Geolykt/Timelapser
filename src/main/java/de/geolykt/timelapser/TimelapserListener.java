@@ -5,7 +5,9 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Paint;
+import java.awt.Polygon;
 import java.awt.Rectangle;
+import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.TexturePaint;
 import java.awt.font.FontRenderContext;
@@ -63,8 +65,7 @@ public final class TimelapserListener implements Listener, MathHelper {
 
     private final Map<Integer, Paint> vassalPaint = new HashMap<>();
 
-    protected final AbstractCellingImpl cellingImpl =  new AWTVoronoiCellingImpl(CellingType.AWTVORONOI_TRUNCTUATED_SMOOTH,
-            maxPolygonDistance);
+    protected final AbstractCellingImpl cellingImpl = new DistanceSquaresCellingImpl(10, 200, 60);
 
     public TimelapserListener(Timelapser extension) {
         this.extension = extension;
@@ -230,17 +231,25 @@ public final class TimelapserListener implements Listener, MathHelper {
                         continue;
                     }
                     g2d.setColor(markers.get(i).c);
-                    g2d.fillPolygon(polygons.get(i));
+                    Shape polygon = polygons.get(i);
                     Stroke defaultStroke = g2d.getStroke();
                     g2d.setStroke(new BasicStroke(10.0F, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                     g2d.setColor(markers.get(i).c.darker());
                     if (markers.get(i).d != null) {
                         Paint oldPaint = g2d.getPaint();
                         g2d.setPaint(markers.get(i).d);
-                        g2d.fillPolygon(polygons.get(i));
+                        if (polygon instanceof Polygon) {
+                            g2d.fillPolygon((Polygon) polygon);
+                        } else {
+                            g2d.fill(polygon);
+                        }
                         g2d.setPaint(oldPaint);
                     } else {
-                        g2d.fillPolygon(polygons.get(i));
+                        if (polygon instanceof Polygon) {
+                            g2d.fillPolygon((Polygon) polygon);
+                        } else {
+                            g2d.fill(polygon);
+                        }
                     }
                     g2d.setColor(Color.WHITE);
                     g2d.setStroke(defaultStroke);

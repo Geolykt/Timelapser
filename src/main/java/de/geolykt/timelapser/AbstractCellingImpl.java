@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Paint;
 import java.awt.Point;
 import java.awt.Polygon;
+import java.awt.Shape;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,7 +25,7 @@ public abstract class AbstractCellingImpl implements MathHelper {
         return type;
     }
 
-    public abstract List<Polygon> process(ArrayList<ImmutableQuadruple<Float, Float, Color, Paint>> markers,
+    public abstract List<? extends Shape> process(ArrayList<ImmutableQuadruple<Float, Float, Color, Paint>> markers,
             final float minW, final float maxW, final float minH, final float maxH,
             final float canvasW, final float canvasH);
 
