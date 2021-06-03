@@ -19,7 +19,13 @@ public enum CellingType {
      * A smoothed out variant of the {@link #AWTVORONOI_TRUNCTUATED} implementation. Edges are less radical if they
      * are trunctuated.
      */
-    AWTVORONOI_TRUNCTUATED_SMOOTH(Family.VORONOI);
+    AWTVORONOI_TRUNCTUATED_SMOOTH(Family.VORONOI),
+
+    /**
+     * Built-in implementation of the marching squares algorithm.
+     * Breaks the markers into rasters for easy computation.
+     */
+    TIMELAPSER_ISOLINE(Family.ISOLINE);
 
     /**
      * The algorithm family that is used, the exact implementation is left out however,

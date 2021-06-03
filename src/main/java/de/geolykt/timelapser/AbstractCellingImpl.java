@@ -12,7 +12,7 @@ import java.util.Map;
 public abstract class AbstractCellingImpl implements MathHelper {
 
     public static int DEBUG_POLYGON = -1;
-    public static boolean ENABLE_DEBUG = false;
+    public static boolean ENABLE_DEBUG = true;
 
     protected final CellingType type;
 
@@ -35,7 +35,7 @@ public abstract class AbstractCellingImpl implements MathHelper {
             List<Map.Entry<Point, Point>> polygonPoints = siteEdges.get(i);
             int pointAmount = polygonPoints.size();
             if (pointAmount == 0) {
-//                System.err.println("Cell " + i + " is empty! Generating empty polygon.");
+                System.err.println("Cell " + i + " is empty! Generating empty polygon.");
                 polygons.add(null);
                 continue;
             }

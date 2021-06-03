@@ -63,7 +63,7 @@ public final class TimelapserListener implements Listener, MathHelper {
 
     private final Map<Integer, Paint> vassalPaint = new HashMap<>();
 
-    protected final AbstractCellingImpl cellingImpl = new AWTVoronoiCellingImpl(CellingType.AWTVORONOI_TRUNCTUATED_SMOOTH,
+    protected final AbstractCellingImpl cellingImpl =  new AWTVoronoiCellingImpl(CellingType.AWTVORONOI_TRUNCTUATED_SMOOTH,
             maxPolygonDistance);
 
     public TimelapserListener(Timelapser extension) {
@@ -226,6 +226,9 @@ public final class TimelapserListener implements Listener, MathHelper {
                     throw new IllegalStateException("Unexpected polygon amount");
                 }
                 for (int i = 0; i < markers.size(); i++) {
+                    if (polygons.get(i) == null) {
+                        continue;
+                    }
                     g2d.setColor(markers.get(i).c);
                     g2d.fillPolygon(polygons.get(i));
                     Stroke defaultStroke = g2d.getStroke();
